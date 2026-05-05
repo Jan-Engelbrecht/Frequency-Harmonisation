@@ -22,8 +22,14 @@ uploaded_file = st.sidebar.file_uploader("Upload Excel Workbook", type=["xlsx"])
 # ==============================
 def detect_frequency(df):
     df = df.copy()
-    df.iloc[:, 0] = pd.to_datetime(df.iloc[:, 0], errors='coerce')
-    df = df.dropna().sort_values(df.columns[0])
+    col = df.iloc[:, 0]
+    
+    # Handle both string and already-parsed datetime columns
+    if not pd.api.types.is_datetime64_any_dtype(col):
+        col = pd.to_datetime(col, errors='coerce')
+    
+    df.iloc[:, 0] = col
+    df = df.dropna(subset=[df.columns[0]]).sort_values(df.columns[0])
 
     diffs = df.iloc[:, 0].diff().dropna()
     if len(diffs) == 0:
