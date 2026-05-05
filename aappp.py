@@ -24,14 +24,14 @@ def detect_frequency(df):
     df = df.copy()
     col = df.iloc[:, 0]
     
-    # Handle both string and already-parsed datetime columns
+    # Convert to datetime if needed
     if not pd.api.types.is_datetime64_any_dtype(col):
         col = pd.to_datetime(col, errors='coerce')
     
-    df.iloc[:, 0] = col
-    df = df.dropna(subset=[df.columns[0]]).sort_values(df.columns[0])
+    # Work directly with the series, don't assign back to df
+    col = col.dropna().sort_values().reset_index(drop=True)
 
-    diffs = df.iloc[:, 0].diff().dropna()
+    diffs = col.diff().dropna()
     if len(diffs) == 0:
         return "M"
 
