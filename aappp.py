@@ -91,31 +91,22 @@ def denton_method(low_freq_series, high_freq_index):
     sub-periods by minimising the sum of squared first differences of the
     ratio (adjusted / indicator), subject to the constraint that the
     high-frequency values sum to the low-frequency aggregate within each period.
- 
+
     If no indicator series is available a uniform (flat) indicator of ones
     is used, which reduces to simple proportional distribution.
- 
+
     Parameters
     ----------
     low_freq_series : pd.Series
         Low-frequency aggregates indexed by their period start dates.
     high_freq_index : pd.DatetimeIndex
         The target high-frequency date index.
- 
+
     Returns
     -------
     pd.Series
         High-frequency series that aggregates back to the low-frequency totals.
-
-    Solves the constrained least-squares problem:
-        minimise   sum_t [ (x_t/p_t - x_{t-1}/p_{t-1})^2 ]
-        subject to sum of x within each low-freq period = low-freq aggregate
-
-    Where p_t is the indicator (uniform ones if no external indicator).
-    Uses the closed-form matrix solution: x = p * D'(D*diag(p)*D')^{-1} * y
     """
-    import numpy as np
-
     n = len(high_freq_index)
     lf_dates  = low_freq_series.index.sort_values()
     lf_values = low_freq_series.reindex(lf_dates).values
@@ -137,15 +128,15 @@ def denton_method(low_freq_series, high_freq_index):
         D[t, t + 1] =  1.0
 
     P_inv = np.diag(1.0 / p)
-    D_p   = D @ P_inv 
-    Q = D_p.T @ D_p     
-    
+    D_p   = D @ P_inv
+    Q     = D_p.T @ D_p
+
     try:
-        Q_inv     = np.linalg.inv(Q + np.eye(n) * 1e-10)   # small ridge for stability
-        CQinv     = C @ Q_inv                                # m x n
-        CQinvCt   = CQinv @ C.T                             # m x m
-        lambdas   = np.linalg.solve(CQinvCt, lf_values)     # m
-        x         = Q_inv @ C.T @ lambdas                   # n
+        Q_inv   = np.linalg.inv(Q + np.eye(n) * 1e-10)
+        CQinv   = C @ Q_inv
+        CQinvCt = CQinv @ C.T
+        lambdas = np.linalg.solve(CQinvCt, lf_values)
+        x       = Q_inv @ C.T @ lambdas
     except np.linalg.LinAlgError:
         x = np.zeros(n)
         for i in range(m):
@@ -171,15 +162,15 @@ def downscale(df, freq, method):
     pandas_freq = freq_map.get(freq, freq)
 
     if method == "First":
-        return df.resample(pandas_freq).first()
+        return data.resample(pandas_freq).first()
     elif method == "Mean":
-        return df.resample(pandas_freq).mean()
+        return data.resample(pandas_freq).mean()
     elif method == "Median":
-        return df.resample(pandas_freq).median()
+        return data.resample(pandas_freq).median()
     elif method == "Sum":
-        return df.resample(pandas_freq).sum()
+        return data.resample(pandas_freq).sum()
     else:
-        return df.resample(pandas_freq).mean()
+        return data.resample(pandas_freq).mean()
 
 
 def upscale(df, freq, method):
@@ -270,7 +261,7 @@ if uploaded_file:
 
     if up_method == "Denton":
         st.sidebar.caption(
-            "ℹ️ **Denton (Proportional):** Distributes each low-frequency "
+            "ℹ️ **Denton:** Distributes each low-frequency "
             "aggregate across sub-periods by minimising first-difference "
             "revisions while preserving aggregation constraints."
         )
@@ -370,7 +361,6 @@ if uploaded_file:
                     for col in data.columns:
                         data[col] = data[col] * fx_aligned["USDZAR"].values
 
-                    # Store back with reset index so downstream code works uniformly
                     restored = data.reset_index()
                     restored.columns = [sheets[name].columns[0]] + list(data.columns)
                     sheets[name] = restored
@@ -417,7 +407,7 @@ if uploaded_file:
             except Exception as e:
                 st.error(f"{name} failed: {e}")
 
-        # Apply date filters after all series processed
+        # Apply date filters AFTER all series are processed
         series_ranges = None
 
         if intersect_dates and results:
@@ -522,7 +512,7 @@ if uploaded_file:
         if results:
             combined = pd.concat(results.values(), axis=1).sort_index()
 
-            missing = combined.isna().sum().sum() > 0
+            missing    = combined.isna().sum().sum() > 0
             duplicates = combined.index.duplicated().any()
 
             freq_map_qc = {"D": "D", "W": "W-MON", "M": "MS", "Q": "QS", "A": "YS"}
