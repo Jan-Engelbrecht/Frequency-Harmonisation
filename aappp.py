@@ -171,13 +171,15 @@ def downscale(df, freq, method):
     pandas_freq = freq_map.get(freq, freq)
 
     if method == "First":
-        return data.resample(pandas_freq).first()
+        return df.resample(pandas_freq).first()
     elif method == "Mean":
-        return data.resample(pandas_freq).mean()
+        return df.resample(pandas_freq).mean()
     elif method == "Median":
-        return data.resample(pandas_freq).median()
+        return df.resample(pandas_freq).median()
+    elif method == "Sum":
+        return df.resample(pandas_freq).sum()
     else:
-        return data.resample(pandas_freq).mean()
+        return df.resample(pandas_freq).mean()
 
 
 def upscale(df, freq, method):
@@ -258,7 +260,7 @@ if uploaded_file:
 
     down_method = st.sidebar.selectbox(
         "Downscaling Method",
-        ["First", "Mean", "Median"]
+        ["First", "Mean", "Median", "Sum"]
     )
 
     up_method = st.sidebar.selectbox(
