@@ -84,47 +84,74 @@ def fetch_usdzar(start_date, end_date):
 # DENTON METHOD (PROPORTIONAL)
 # ==============================
 def denton_method(low_freq_series, high_freq_index):
+    """
+    Denton Proportional First Difference (PFD) method.
+
+    Distributes each low-frequency aggregate value across the high-frequency
+    sub-periods by minimising the sum of squared first differences of the
+    ratio (adjusted / indicator), subject to the constraint that the
+    high-frequency values sum to the low-frequency aggregate within each period.
+ 
+    If no indicator series is available a uniform (flat) indicator of ones
+    is used, which reduces to simple proportional distribution.
+ 
+    Parameters
+    ----------
+    low_freq_series : pd.Series
+        Low-frequency aggregates indexed by their period start dates.
+    high_freq_index : pd.DatetimeIndex
+        The target high-frequency date index.
+ 
+    Returns
+    -------
+    pd.Series
+        High-frequency series that aggregates back to the low-frequency totals.
+
+    Solves the constrained least-squares problem:
+        minimise   sum_t [ (x_t/p_t - x_{t-1}/p_{t-1})^2 ]
+        subject to sum of x within each low-freq period = low-freq aggregate
+
+    Where p_t is the indicator (uniform ones if no external indicator).
+    Uses the closed-form matrix solution: x = p * D'(D*diag(p)*D')^{-1} * y
+    """
+    import numpy as np
+
     n = len(high_freq_index)
     lf_dates  = low_freq_series.index.sort_values()
     lf_values = low_freq_series.reindex(lf_dates).values
     m = len(lf_dates)
 
     C = np.zeros((m, n))
-    period_lengths = []
-
     for i, lf_date in enumerate(lf_dates):
         if i + 1 < m:
             mask = (high_freq_index >= lf_date) & (high_freq_index < lf_dates[i + 1])
         else:
             mask = high_freq_index >= lf_date
         C[i, mask] = 1.0
-        period_lengths.append(mask.sum())
-
-    period_lengths = np.array(period_lengths, dtype=float)
-    lf_values_adjusted = lf_values * period_lengths
 
     p = np.ones(n)
+
     D = np.zeros((n - 1, n))
     for t in range(n - 1):
         D[t, t]     = -1.0
         D[t, t + 1] =  1.0
 
     P_inv = np.diag(1.0 / p)
-    D_p   = D @ P_inv
-    Q = D_p.T @ D_p
-
+    D_p   = D @ P_inv 
+    Q = D_p.T @ D_p     
+    
     try:
-        Q_inv     = np.linalg.inv(Q + np.eye(n) * 1e-10)
-        CQinv     = C @ Q_inv
-        CQinvCt   = CQinv @ C.T
-        lambdas   = np.linalg.solve(CQinvCt, lf_values_adjusted)
-        x         = Q_inv @ C.T @ lambdas
+        Q_inv     = np.linalg.inv(Q + np.eye(n) * 1e-10)   # small ridge for stability
+        CQinv     = C @ Q_inv                                # m x n
+        CQinvCt   = CQinv @ C.T                             # m x m
+        lambdas   = np.linalg.solve(CQinvCt, lf_values)     # m
+        x         = Q_inv @ C.T @ lambdas                   # n
     except np.linalg.LinAlgError:
         x = np.zeros(n)
         for i in range(m):
             idx = np.where(C[i] == 1)[0]
             if len(idx) > 0 and not np.isnan(lf_values[i]):
-                x[idx] = lf_values[i]
+                x[idx] = lf_values[i] / len(idx)
 
     return pd.Series(x, index=high_freq_index)
 
