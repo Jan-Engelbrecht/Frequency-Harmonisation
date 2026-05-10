@@ -215,9 +215,23 @@ def upscale(df, freq, method):
         return data.interpolate(method="linear", limit_direction="both")
     elif method == "Spline":
         try:
-            return data.interpolate(method="spline", order=2)
-        except:
-            return data.interpolate(method="linear", limit_direction="both")
+            from scipy.interpolate import UnivariateSpline
+            result_cols = {}
+            numeric_index = np.arange(len(data))
+            full_numeric  = np.linspace(0, len(data) - 1, len(full_index))
+    
+            for col in data.columns:
+                col_data = data[col].dropna()
+                col_numeric = np.array([
+                    np.searchsorted(data.index, idx)
+                    for idx in col_data.index
+                ], dtype=float)
+                spline = UnivariateSpline(col_numeric, col_data.values, s=0, k=3)
+                result_cols[col] = spline(full_numeric)
+    
+            return pd.DataFrame(result_cols, index=full_index)
+        except Exception:
+            return data.reindex(full_index).interpolate(method="linear", limit_direction="both")
     else:
         return data.ffill()
 
