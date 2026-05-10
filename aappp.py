@@ -85,10 +85,10 @@ def fetch_usdzar(start_date, end_date):
 # ==============================
 def denton_method(low_freq_series, high_freq_index):
     """
-    Denton Proportional First Difference (PFD) method.
+    Denton Proportional  Difference (PFD) method.
 
     Distributes each low-frequency aggregate value across the high-frequency
-    sub-periods by minimising the sum of squared first differences of the
+    sub-periods by minimising the sum of squared  differences of the
     ratio (adjusted / indicator), subject to the constraint that the
     high-frequency values sum to the low-frequency aggregate within each period.
 
@@ -161,8 +161,8 @@ def downscale(df, freq, method):
     }
     pandas_freq = freq_map.get(freq, freq)
 
-    if method == "First":
-        return data.resample(pandas_freq).first()
+    if method == "Last":
+        return data.resample(pandas_freq).last()
     elif method == "Mean":
         return data.resample(pandas_freq).mean()
     elif method == "Median":
@@ -251,7 +251,7 @@ if uploaded_file:
 
     down_method = st.sidebar.selectbox(
         "Downscaling Method",
-        ["First", "Mean", "Median", "Sum"]
+        ["Last", "Mean", "Median", "Sum"]
     )
 
     up_method = st.sidebar.selectbox(
