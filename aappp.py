@@ -85,10 +85,10 @@ def fetch_usdzar(start_date, end_date):
 # ==============================
 def denton_method(low_freq_series, high_freq_index):
     """
-    Denton Proportional  Difference (PFD) method.
+    Denton Proportional First Difference (PFD) method.
 
     Distributes each low-frequency aggregate value across the high-frequency
-    sub-periods by minimising the sum of squared  differences of the
+    sub-periods by minimising the sum of squared first differences of the
     ratio (adjusted / indicator), subject to the constraint that the
     high-frequency values sum to the low-frequency aggregate within each period.
 
@@ -465,7 +465,7 @@ if uploaded_file:
 
             for name, df in results.items():
                 for col in df.columns:
-                    ax2.plot(df.index, df[col], label=name)
+                    ax2.plot(df.index, df[col], label=f"{name} ({target_freq})")
 
             ax2.legend()
             ax2.grid(True)
@@ -570,7 +570,10 @@ if uploaded_file:
 
                 with pd.ExcelWriter(buffer) as writer:
                     for name, df in results.items():
-                        df.to_excel(writer, sheet_name=name)
+                        sheet_label = f"{name} ({target_freq})"
+                        if len(sheet_label) > 31:
+                            sheet_label = f"{name[:28 - len(target_freq)]}({target_freq})"
+                        df.to_excel(writer, sheet_name=sheet_label)
 
                 st.download_button(
                     label="📥 Download Excel File",
