@@ -573,7 +573,9 @@ if uploaded_file:
                         sheet_label = f"{name} ({target_freq})"
                         if len(sheet_label) > 31:
                             sheet_label = f"{name[:28 - len(target_freq)]}({target_freq})"
-                        df.to_excel(writer, sheet_name=sheet_label)
+                        df_export = df.copy()
+                        df_export.index.name = "observed_date"
+                        df_export.to_excel(writer, sheet_name=sheet_label)
 
                 st.download_button(
                     label="📥 Download Excel File",
